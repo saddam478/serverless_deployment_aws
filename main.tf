@@ -101,7 +101,7 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
 # acheive files
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "lambda/lambda_function.py"
+  source_dir = "lambda"
   output_path = "lambda/index.zip"
 }
 # -------------------------------
