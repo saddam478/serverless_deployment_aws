@@ -94,16 +94,21 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
 # -------------------------------
 # ECR Repository
 # -------------------------------
-resource "aws_ecr_repository" "my_ecr_repo" {
-  name                 = "my-ecr-repo"
-  image_tag_mutability = "MUTABLE"
+#resource "aws_ecr_repository" "my_ecr_repo" {
+#  name                 = "my-ecr-repo"
+#  image_tag_mutability = "MUTABLE"
+#}
+# acheive files
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_file = "lambda/*.py"
+  output_path = "lambda/index.zip"
 }
-
 # -------------------------------
 # IAM Role for Lambda
 # -------------------------------
 resource "aws_iam_role" "lambda_role" {
-  name = "lambda-ecr-role"
+  name = "lambda-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -121,9 +126,13 @@ resource "aws_iam_policy_attachment" "lambda_basic_exec" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_policy_attachment" "lambda_ecr_access" {
-  name       = "lambda-ecr-access"
-  roles      = [aws_iam_role.lambda_role.name]
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+# ✅ AWS Lambda Function (Python)
+resource "aws_lambda_function" "yt_lambda_function" {
+  function_name    = "DemoLambdaFunction"
+  filename        = "lambda/index.zip"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.lambda_handler"  # Change as per your Python function
+  runtime         = "python3.9"             # Adjust Python version if needed
+  timeout         = 30
+  source_code_hash = data.archive_file.lambda_zip_file.output_base64sha256
 }
-
