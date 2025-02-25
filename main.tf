@@ -134,7 +134,7 @@ resource "aws_lambda_function" "yt_lambda_function" {
   handler         = "index.lambda_handler"  # Change as per your Python function
   runtime         = "python3.9"             # Adjust Python version if needed
   timeout         = 30
-  source_code_hash = data.archive_file.lambda_zip_file.output_base64sha256
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 }
 
 #-----------------------
