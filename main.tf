@@ -5,9 +5,11 @@ provider "aws" {
 # S3 Bucket for Terraform State with Versioning
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "terraform-state-bucket-unique-name"
+
   versioning {
     enabled = true
   }
+
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -22,22 +24,46 @@ resource "aws_dynamodb_table" "terraform_locks" {
   name           = "terraform-locks"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "LockID"
+
   attribute {
     name = "LockID"
     type = "S"
   }
 }
 
-# S3 Bucket for File Storage with Public Access
+# S3 Bucket for File Storage (Public Access Configured via Policy)
 resource "aws_s3_bucket" "file_storage" {
   bucket = "file-storage-bucket-unique-name"
-  acl    = "public-read"
+}
+
+# Enable public access to the file storage bucket
+resource "aws_s3_bucket_public_access_block" "file_storage_block" {
+  bucket = aws_s3_bucket.file_storage.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "public_access" {
+  bucket = aws_s3_bucket.file_storage.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "s3:GetObject"
+      Resource  = "${aws_s3_bucket.file_storage.arn}/*"
+    }]
+  })
 }
 
 # ECR Repository for Container Image Storage
 resource "aws_ecr_repository" "lambda_ecr_repo" {
   name                 = "lambda-ecr-repo"
   image_tag_mutability = "MUTABLE"
+
   image_scanning_configuration {
     scan_on_push = true
   }
@@ -46,6 +72,7 @@ resource "aws_ecr_repository" "lambda_ecr_repo" {
 # IAM Role for Lambda Execution
 resource "aws_iam_role" "lambda_exec_role" {
   name = "lambda_exec_role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -56,12 +83,20 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
+# Attach permissions for Lambda execution
+resource "aws_iam_policy_attachment" "lambda_basic_execution" {
+  name       = "lambda-basic-execution"
+  roles      = [aws_iam_role.lambda_exec_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 # Lambda Function using ECR Image
 resource "aws_lambda_function" "process_zip" {
   function_name = "process_zip_function"
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.lambda_ecr_repo.repository_url}:latest"
   role          = aws_iam_role.lambda_exec_role.arn
+
   environment {
     variables = {
       BUCKET_NAME = aws_s3_bucket.file_storage.bucket
@@ -89,9 +124,9 @@ resource "aws_api_gateway_method" "proxy" {
 }
 
 resource "aws_api_gateway_integration" "lambda" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.proxy.id
-  http_method = "GET"
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.proxy.id
+  http_method             = "GET"
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.process_zip.invoke_arn
@@ -100,7 +135,8 @@ resource "aws_api_gateway_integration" "lambda" {
 resource "aws_api_gateway_deployment" "example" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   stage_name  = "prod"
-  depends_on  = [aws_api_gateway_integration.lambda]
+
+  depends_on = [aws_api_gateway_integration.lambda]
 }
 
 # AWS Cognito User Pool for SSO
