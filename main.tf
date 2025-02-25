@@ -60,7 +60,7 @@ resource "aws_iam_user_policy_attachment" "attach_dynamodb" {
 # S3 Bucket (Public Access)
 # -------------------------------
 resource "aws_s3_bucket" "public_bucket" {
-  bucket = "my-public-bucket-unique-name"
+  bucket = "my-public-bucket-unique-name456"
 }
 
 resource "aws_s3_bucket_acl" "public_access" {
