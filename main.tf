@@ -4,7 +4,7 @@ provider "aws" {
 
 # ✅ S3 Bucket for Terraform State
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "terraform-state-bucket-unique-name"
+  bucket = "terraform-state-bucket-unique-name123"
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state_versioning" {
