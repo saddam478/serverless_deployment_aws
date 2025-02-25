@@ -1,9 +1,7 @@
-name: Terraform Deployment1
+name: Terraform Deployment
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
   setup-infra:
@@ -46,6 +44,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
       - name: Update Terraform Backend to Use S3
         run: |
           cat > backend.tf <<EOF
@@ -65,3 +68,27 @@ jobs:
 
       - name: Apply Terraform to Store State in S3
         run: terraform apply -auto-approve
+
+  destroy-infra:
+    needs: store-state
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'destroy'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
+      - name: Destroy Infrastructure
+        run: terraform destroy -auto-approve
