@@ -2,28 +2,23 @@ provider "aws" {
   region = "ap-south-1"
 }
 
-# S3 Bucket for Terraform State with Versioning
+# S3 Bucket for Terraform State
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "terraform-state-bucket-unique-name"
+}
 
-  versioning {
-    enabled = true
-  }
-
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
+resource "aws_s3_bucket_versioning" "terraform_state_versioning" {
+  bucket = aws_s3_bucket.terraform_state.id
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
 # DynamoDB Table for State Locking
 resource "aws_dynamodb_table" "terraform_locks" {
-  name           = "terraform-locks"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
+  name         = "terraform-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
 
   attribute {
     name = "LockID"
@@ -31,35 +26,27 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
-# S3 Bucket for File Storage (Public Access Configured via Policy)
-resource "aws_s3_bucket" "file_storage" {
-  bucket = "file-storage-bucket-unique-name"
-}
-
-# Enable public access to the file storage bucket
-resource "aws_s3_bucket_public_access_block" "file_storage_block" {
-  bucket = aws_s3_bucket.file_storage.id
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket_policy" "public_access" {
-  bucket = aws_s3_bucket.file_storage.id
-  policy = jsonencode({
+# IAM Policy for DynamoDB Access (Attach this to your IAM User/Role)
+resource "aws_iam_policy" "dynamodb_policy" {
+  name        = "DynamoDBFullAccess"
+  description = "Policy for Terraform state locking"
+  policy      = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect    = "Allow"
-      Principal = "*"
-      Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.file_storage.arn}/*"
+      Effect   = "Allow"
+      Action   = ["dynamodb:CreateTable", "dynamodb:DescribeTable", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:GetItem"]
+      Resource = "arn:aws:dynamodb:ap-south-1:*:table/terraform-locks"
     }]
   })
 }
 
-# ECR Repository for Container Image Storage
+# Attach this policy to the user or role
+resource "aws_iam_user_policy_attachment" "attach_dynamodb" {
+  user       = "demo1"  # Change this to your actual IAM username
+  policy_arn = aws_iam_policy.dynamodb_policy.arn
+}
+
+# ECR Repository
 resource "aws_ecr_repository" "lambda_ecr_repo" {
   name                 = "lambda-ecr-repo"
   image_tag_mutability = "MUTABLE"
@@ -69,7 +56,7 @@ resource "aws_ecr_repository" "lambda_ecr_repo" {
   }
 }
 
-# IAM Role for Lambda Execution
+# IAM Role for Lambda
 resource "aws_iam_role" "lambda_exec_role" {
   name = "lambda_exec_role"
 
@@ -83,25 +70,19 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
-# Attach permissions for Lambda execution
-resource "aws_iam_policy_attachment" "lambda_basic_execution" {
-  name       = "lambda-basic-execution"
+# Attach basic execution permissions to Lambda
+resource "aws_iam_policy_attachment" "lambda_exec_attach" {
+  name       = "LambdaExecPolicy"
   roles      = [aws_iam_role.lambda_exec_role.name]
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda Function using ECR Image
+# Lambda Function (Ensure the ECR Image Exists Before Running Terraform Apply)
 resource "aws_lambda_function" "process_zip" {
   function_name = "process_zip_function"
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.lambda_ecr_repo.repository_url}:latest"
   role          = aws_iam_role.lambda_exec_role.arn
-
-  environment {
-    variables = {
-      BUCKET_NAME = aws_s3_bucket.file_storage.bucket
-    }
-  }
 }
 
 # API Gateway for Lambda Trigger
@@ -139,18 +120,33 @@ resource "aws_api_gateway_deployment" "example" {
   depends_on = [aws_api_gateway_integration.lambda]
 }
 
-# AWS Cognito User Pool for SSO
+# AWS Cognito User Pool
 resource "aws_cognito_user_pool" "pool" {
   name = "mypool"
+}
+
+# IAM Policy for Cognito Access (Attach to IAM User/Role)
+resource "aws_iam_policy" "cognito_policy" {
+  name        = "CognitoFullAccess"
+  description = "Policy for Cognito User Pool"
+  policy      = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["cognito-idp:CreateUserPool", "cognito-idp:DescribeUserPool", "cognito-idp:DeleteUserPool"]
+      Resource = "arn:aws:cognito-idp:ap-south-1:*:userpool/*"
+    }]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "attach_cognito" {
+  user       = "demo1"  # Change to actual IAM user
+  policy_arn = aws_iam_policy.cognito_policy.arn
 }
 
 # Outputs
 output "terraform_state_bucket" {
   value = aws_s3_bucket.terraform_state.bucket
-}
-
-output "file_storage_bucket" {
-  value = aws_s3_bucket.file_storage.bucket
 }
 
 output "ecr_repository_url" {
