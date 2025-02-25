@@ -132,7 +132,7 @@ resource "aws_lambda_function" "yt_lambda_function" {
   filename        = "lambda/index.zip"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.lambda_handler"  # Change as per your Python function
-  runtime         = "python3.9"             # Adjust Python version if needed
+  runtime         = "python3.13"             # Adjust Python version if needed
   timeout         = 30
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 }
