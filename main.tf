@@ -1,13 +1,3 @@
-terraform {
-  backend "s3" {
-    bucket         = "terraform-state-bucket-unique-name1"
-    key           = "terraform.tfstate"
-    region        = "ap-south-1"
-    dynamodb_table = "terraform-locks"
-    encrypt       = true
-  }
-}
-
 provider "aws" {
   region = "ap-south-1"
 }
@@ -76,4 +66,14 @@ resource "aws_iam_policy" "terraform_policy" {
 resource "aws_iam_user_policy_attachment" "attach_terraform_policy" {
   user       = "demo1"  # Change this to your actual IAM username
   policy_arn = aws_iam_policy.terraform_policy.arn
+}
+
+terraform {
+  backend "s3" {
+    bucket         = "terraform-state-bucket-unique-name1"
+    key           = "terraform.tfstate"
+    region        = "ap-south-1"
+    dynamodb_table = "terraform-locks"
+    encrypt       = true
+  }
 }
