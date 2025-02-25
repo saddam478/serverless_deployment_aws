@@ -1,3 +1,13 @@
+terraform {
+  backend "s3" {
+    bucket         = "terraform-state-bucket-unique-name"
+    key           = "terraform.tfstate"
+    region        = "ap-south-1"
+    dynamodb_table = "terraform-locks"
+    encrypt       = true
+  }
+}
+
 provider "aws" {
   region = "ap-south-1"
 }
@@ -26,22 +36,44 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
-# IAM Policy for DynamoDB Access (Attach this to your IAM User/Role)
-resource "aws_iam_policy" "dynamodb_policy" {
-  name        = "DynamoDBFullAccess"
-  description = "Policy for Terraform state locking"
+# IAM Policy for S3 and DynamoDB Access
+resource "aws_iam_policy" "terraform_policy" {
+  name        = "TerraformStateManagement"
+  description = "Policy for Terraform state management in S3 and DynamoDB"
   policy      = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["dynamodb:CreateTable", "dynamodb:DescribeTable", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:GetItem"]
-      Resource = "arn:aws:dynamodb:ap-south-1:*:table/terraform-locks"
-    }]
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::terraform-state-bucket-unique-name",
+          "arn:aws:s3:::terraform-state-bucket-unique-name/*"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = [
+          "dynamodb:CreateTable",
+          "dynamodb:DescribeTable",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:GetItem",
+          "dynamodb:DeleteItem"
+        ]
+        Resource = "arn:aws:dynamodb:ap-south-1:*:table/terraform-locks"
+      }
+    ]
   })
 }
 
-# Attach this policy to the user or role
-resource "aws_iam_user_policy_attachment" "attach_dynamodb" {
+# Attach Policy to IAM User
+resource "aws_iam_user_policy_attachment" "attach_terraform_policy" {
   user       = "demo1"  # Change this to your actual IAM username
-  policy_arn = aws_iam_policy.dynamodb_policy.arn
+  policy_arn = aws_iam_policy.terraform_policy.arn
 }
