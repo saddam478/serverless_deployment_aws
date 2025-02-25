@@ -63,9 +63,25 @@ resource "aws_s3_bucket" "public_bucket" {
   bucket = "my-public-bucket-unique-name456"
 }
 
-resource "aws_s3_bucket_acl" "public_access" {
+resource "aws_s3_bucket_public_access_block" "public_access_block" {
+  bucket                  = aws_s3_bucket.public_bucket.id
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "public_read_policy" {
   bucket = aws_s3_bucket.public_bucket.id
-  acl    = "public-read"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Principal = "*"
+      Action   = "s3:GetObject"
+      Resource = "${aws_s3_bucket.public_bucket.arn}/*"
+    }]
+  })
 }
 
 # -------------------------------
@@ -103,61 +119,4 @@ resource "aws_iam_policy_attachment" "lambda_ecr_access" {
   roles      = [aws_iam_role.lambda_role.name]
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
-
-# -------------------------------
-# Lambda Function (ECR Image)
-# -------------------------------
-resource "aws_lambda_function" "ecr_lambda" {
-  function_name = "my-ecr-lambda"
-  role          = aws_iam_role.lambda_role.arn
-  package_type  = "Image"
-
-  image_uri = "${aws_ecr_repository.my_ecr_repo.repository_url}:latest"
-
-  timeout     = 10
-  memory_size = 128
-
-  depends_on = [
-    aws_iam_policy_attachment.lambda_basic_exec,
-    aws_iam_policy_attachment.lambda_ecr_access
-  ]
-}
-
-# -------------------------------
-# API Gateway (Trigger Lambda)
-# -------------------------------
-resource "aws_apigatewayv2_api" "http_api" {
-  name          = "my-http-api"
-  protocol_type = "HTTP"
-}
-
-resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id             = aws_apigatewayv2_api.http_api.id
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-  integration_uri    = aws_lambda_function.ecr_lambda.invoke_arn
-}
-
-resource "aws_apigatewayv2_route" "lambda_route" {
-  api_id    = aws_apigatewayv2_api.http_api.id
-  route_key = "GET /lambda"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
-}
-
-resource "aws_apigatewayv2_stage" "default_stage" {
-  api_id      = aws_apigatewayv2_api.http_api.id
-  name        = "$default"
-  auto_deploy = true
-}
-
-resource "aws_lambda_permission" "api_gateway_permission" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ecr_lambda.function_name
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
-}
-
-
 
