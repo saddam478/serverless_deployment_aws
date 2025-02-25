@@ -1,7 +1,7 @@
 name: Terraform Deployment
 
 on:
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:  # Allows manual execution
 
 jobs:
   setup-infra:
@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -23,72 +23,8 @@ jobs:
         with:
           terraform_version: latest
 
-      - name: Initialize Terraform (Local Backend)
-        run: terraform init
-
-      - name: Apply Terraform to Create S3 & DynamoDB
-        run: terraform apply -auto-approve
-
-  store-state:
-    needs: setup-infra
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
-
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: latest
-
-      - name: Update Terraform Backend to Use S3
+      - name: Copy Terraform State File to S3
         run: |
-          cat > backend.tf <<EOF
-          terraform {
-            backend "s3" {
-              bucket         = "terraform-state-bucket-unique-name"
-              key            = "terraform.tfstate"
-              region         = "ap-south-1"
-              dynamodb_table = "terraform-locks"
-              encrypt        = true
-            }
-          }
-          EOF
-
-      - name: Reinitialize Terraform with S3 Backend
-        run: terraform init -force-copy
-
-      - name: Apply Terraform to Store State in S3
-        run: terraform apply -auto-approve
-
-  destroy-infra:
-    needs: store-state
-    runs-on: ubuntu-latest
-    if: github.event.inputs.action == 'destroy'
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
-
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: latest
-
-      - name: Destroy Infrastructure
-        run: terraform destroy -auto-approve
+          terraform init
+          terraform apply -auto-approve
+          aws s3 cp terraform.tfstate s3://terraform-state-bucket-unique-name/terraform.tfstate --region ap-south-1
