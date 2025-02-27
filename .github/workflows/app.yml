@@ -28,7 +28,7 @@ jobs:
       - name: Packaging the files
         run: |
           mkdir package
-          cp app/*.html lambda/*.py package/
+          cp app/* package/
           cd package && zip -r ../deployment.zip .
 
       - name: Deploy to AWS Lambda
