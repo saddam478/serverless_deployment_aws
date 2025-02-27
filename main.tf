@@ -202,6 +202,64 @@ resource "aws_lambda_permission" "apigw_lambda" {
   source_arn    = "${aws_api_gateway_rest_api.yt_api.execution_arn}/*/*"
 }
 
+# ✅ Create Cognito User Pool
+resource "aws_cognito_user_pool" "user_pool" {
+  name = "my-user-pool"
+
+  auto_verified_attributes = ["email"]
+
+  password_policy {
+    minimum_length                   = 8
+    require_uppercase                = true
+    require_lowercase                = true
+    require_numbers                  = true
+    require_symbols                  = false
+    temporary_password_validity_days = 7
+  }
+
+  schema {
+    name                     = "email"
+    attribute_data_type      = "String"
+    required                 = true
+    mutable                  = false
+  }
+}
+
+# ✅ Create a User Pool Client (For App Authentication)
+resource "aws_cognito_user_pool_client" "user_pool_client" {
+  name                = "my-user-pool-client"
+  user_pool_id        = aws_cognito_user_pool.user_pool.id
+  generate_secret     = false
+  explicit_auth_flows = ["ADMIN_NO_SRP_AUTH", "USER_PASSWORD_AUTH"]
+
+  allowed_oauth_flows                  = ["code", "implicit"]
+  allowed_oauth_flows_user_pool_client  = true
+  allowed_oauth_scopes                  = ["email", "openid", "profile"]
+  callback_urls                          = ["https://my-public-bucket-unique-name456.s3.ap-south-1.amazonaws.com/logged_in.html"]  # Change this
+  logout_urls                            = ["https://my-public-bucket-unique-name456.s3.ap-south-1.amazonaws.com/logged_out.html"]   # Change this
+  supported_identity_providers           = ["COGNITO"]
+}
+
+# ✅ Create a Domain for Hosted UI (Optional)
+resource "aws_cognito_user_pool_domain" "cognito_domain" {
+  domain       = "my-unique-cognito-domain"  # Choose a unique domain
+  user_pool_id = aws_cognito_user_pool.user_pool.id
+}
+
+# ✅ Outputs
+output "user_pool_id" {
+  value = aws_cognito_user_pool.user_pool.id
+}
+
+output "user_pool_client_id" {
+  value = aws_cognito_user_pool_client.user_pool_client.id
+}
+
+output "cognito_domain_url" {
+  value = "https://${aws_cognito_user_pool_domain.cognito_domain.domain}.auth.${var.aws_region}.amazoncognito.com"
+}
+
+
 output "invoke_url" {
   value = aws_api_gateway_deployment.api_deployment.invoke_url
 }
