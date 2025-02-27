@@ -1,0 +1,43 @@
+name: Deploy to AWS S3 and Lambda funtion
+
+on:
+ workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+          aws --version
+
+      - name: Deploy HTML to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+        run: |
+          aws s3 sync app/ s3://my-public-bucket-unique-name456 --delete
+
+      - name: Packaging the files
+        run: |
+          mkdir package
+          cp app/*.html lambda/*.py package/
+          cd package && zip -r ../deployment.zip .
+
+      - name: Deploy to AWS Lambda
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+        run: |
+          aws lambda update-function-code \
+            --function-name DemoLambdaFunction \
+            --zip-file fileb://deployment.zip \
+            --region ap-south-1
