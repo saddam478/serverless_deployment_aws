@@ -256,7 +256,7 @@ output "user_pool_client_id" {
 }
 
 output "cognito_domain_url" {
-  value = "https://${aws_cognito_user_pool_domain.cognito_domain.domain}.auth.${var.aws_region}.amazoncognito.com"
+  value = "https://${aws_cognito_user_pool_domain.cognito_domain.domain}.auth.ap-south-1.amazoncognito.com"
 }
 
 
