@@ -27,4 +27,4 @@ jobs:
         run: |
           terraform init
           terraform apply -auto-approve
-          
+          aws s3 cp terraform.tfstate s3://terraform-state-bucket-unique-name123/terraform.tfstate
