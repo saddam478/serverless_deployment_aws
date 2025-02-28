@@ -126,7 +126,7 @@ resource "aws_iam_policy_attachment" "lambda_basic_exec" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
- ✅ AWS Lambda Function (Python)
+# ✅ AWS Lambda Function (Python)
 resource "aws_lambda_function" "yt_lambda_function" {
   function_name    = "DemoLambdaFunction"
   filename        = "lambda/index.zip"
