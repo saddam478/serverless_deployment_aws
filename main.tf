@@ -137,7 +137,7 @@ resource "aws_iam_policy_attachment" "lambda_basic_exec" {
 #  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 #}
 #  ✅  AWS ECR creation
-data "aws_ecr_repository" "my_ecr_repo" {
+resource "aws_ecr_repository" "my_ecr_repo" {
   name = "my_ecr_repo"
 }
 
@@ -145,7 +145,7 @@ data "aws_ecr_repository" "my_ecr_repo" {
 resource "aws_lambda_function" "yt_lambda_function" {
   function_name = "DemoLambdaFunction"
   timeout       = 30 # seconds
-  image_uri     = "${data.aws_ecr_repository.my_ecr_repo.repository_url}:dev"
+  image_uri     = "${aws_ecr_repository.my_ecr_repo.repository_url}:latest"
   package_type  = "Image"
   role = aws_iam_role.lambda_role.arn
 
