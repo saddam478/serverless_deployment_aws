@@ -241,10 +241,10 @@ resource "aws_cognito_user_pool_client" "user_pool_client" {
 }
 
 # ✅ Create a Domain for Hosted UI (Optional)
-#resource "aws_cognito_user_pool_domain" "cognito_domain" {
-#  domain       = ""my-unique-auth-domain-123"  # Choose a unique domain
-#  user_pool_id = aws_cognito_user_pool.user_pool.id
-#}
+resource "aws_cognito_user_pool_domain" "cognito_domain" {
+  domain       = "my-unique-auth-domain-123"  # Choose a unique domain
+  user_pool_id = aws_cognito_user_pool.user_pool.id
+}
 
 # ✅ Outputs
 output "user_pool_id" {
