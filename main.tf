@@ -127,16 +127,29 @@ resource "aws_iam_policy_attachment" "lambda_basic_exec" {
 }
 
 # ✅ AWS Lambda Function (Python)
-resource "aws_lambda_function" "yt_lambda_function" {
-  function_name    = "DemoLambdaFunction"
-  filename        = "lambda/index.zip"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "lambda_function.lambda_handler"  # Change as per your Python function
-  runtime         = "python3.13"             # Adjust Python version if needed
-  timeout         = 30
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+#resource "aws_lambda_function" "yt_lambda_function" {
+#  function_name    = "DemoLambdaFunction"
+#  filename        = "lambda/index.zip"
+#  role            = aws_iam_role.lambda_role.arn
+#  handler         = "lambda_function.lambda_handler"  # Change as per your Python function
+#  runtime         = "python3.13"             # Adjust Python version if needed
+#  timeout         = 30
+#  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+#}
+#  ✅  AWS ECR creation
+data "aws_ecr_repository" "my_ecr_repo" {
+  name = "my_ecr_repo"
 }
 
+# ✅ AWS Lambda Function (Python)
+resource "aws_lambda_function" "yt_lambda_function" {
+  function_name = "DemoLambdaFunction"
+  timeout       = 30 # seconds
+  image_uri     = "${data.aws_ecr_repository.my_ecr_repo.repository_url}:dev"
+  package_type  = "Image"
+  role = aws_iam_role.lambda_role.arn
+
+}
 #-----------------------
 # ✅ API Gateway: Create the REST API
 resource "aws_api_gateway_rest_api" "yt_api" {
