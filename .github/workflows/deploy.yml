@@ -11,6 +11,7 @@ on:
         options:
           - base-infra
           - main-infra
+          - destroy-main
 
 jobs:
   base-infra:
@@ -73,3 +74,33 @@ jobs:
       - name: Apply Terraform Changes
         working-directory: main-infra
         run: terraform apply -auto-approve
+  destroy-main-infra:
+    name: Destroy Main Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event.inputs.infra == 'destroy-main-infra'  # ✅ Runs only if "destroy main-infra" is selected
+    #needs: base-infra  # Ensures "base-infra" is deployed first
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
+      - name: Initialize Terraform
+        working-directory: main-infra
+        run: terraform init
+
+      - name: Apply Terraform Changes
+        working-directory: main-infra
+        run: terraform destroy -auto-approve
+        
