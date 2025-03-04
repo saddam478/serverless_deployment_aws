@@ -39,7 +39,7 @@ resource "aws_iam_policy_attachment" "lambda_basic_exec" {
 resource "aws_lambda_function" "yt_lambda_function" {
   function_name = "DemoLambdaFunction"
   timeout       = 30 # seconds
-  image_uri     = "${aws_ecr_repository.my_ecr_repo.repository_url}:latest"
+  image_uri     = "296048193302.dkr.ecr.ap-south-1.amazonaws.com/my-ecr-repo:latest"
   package_type  = "Image"
   role = aws_iam_role.lambda_role.arn
 }
