@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       infra:
-        description: "Choose the infrastructure to deploy (base-infra or main-infra)"
+        description: "Choose the infrastructure to deploy (base-infra or main-infra or destryo main-infra)"
         required: true
         default: "base-infra"
         type: choice
         options:
           - base-infra
           - main-infra
-          - destroy-main
+          - destroy-main-infra
 
 jobs:
   base-infra:
