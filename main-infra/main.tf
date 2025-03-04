@@ -86,6 +86,11 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
 
   depends_on = [aws_s3_bucket_public_access_block.public_access_block]  # <-- Fix: Ensure public access block is updated first
 }
+# ✅ Create ECR Repository
+resource "aws_ecr_repository" "my_ecr_repo" {
+  name                 = "my-ecr-repo"
+  image_tag_mutability = "MUTABLE"
+}
 
 # -------------------------------
 # main-infra
