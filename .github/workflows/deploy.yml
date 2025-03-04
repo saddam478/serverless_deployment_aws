@@ -48,7 +48,7 @@ jobs:
     name: Deploy Main Infrastructure
     runs-on: ubuntu-latest
     if: github.event.inputs.infra == 'main-infra'  # ✅ Runs only if "main-infra" is selected
-    needs: base-infra  # Ensures "base-infra" is deployed first
+    #needs: base-infra  # Ensures "base-infra" is deployed first
 
     steps:
       - name: Checkout Repository
