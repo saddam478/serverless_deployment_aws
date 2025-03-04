@@ -17,27 +17,15 @@ jobs:
           sudo ./aws/install --update
           aws --version
 
-      - name: Deploy HTML to S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ap-south-1
+      - name: Login to Amazon ECR
         run: |
-          aws s3 sync app/ s3://my-public-bucket-unique-name456 --delete
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.ECR_URL }}
 
-      - name: Packaging the files
+      - name: Build and Push Docker Image
         run: |
-          mkdir package
-          cp app/* package/
-          cd package && zip -r ../deployment.zip .
+          docker build -t ${{ secrets.ECR_URL }}:$IMAGE_TAG .
+          docker push ${{ secrets.ECR_URL }}:$IMAGE_TAG
 
-      - name: Deploy to AWS Lambda
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ap-south-1
-        run: |
-          aws lambda update-function-code \
-            --function-name DemoLambdaFunction \
-            --zip-file fileb://deployment.zip \
-            --region ap-south-1
+      #- name: Deploy to AWS Lambda
+      #  run: |
+      #    aws lambda update-function-code --function-name $LAMBDA_FUNCTION --image-uri ${{ secrets.ECR_URL }}:$IMAGE_TAG
