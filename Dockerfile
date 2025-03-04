@@ -2,11 +2,10 @@
 FROM public.ecr.aws/lambda/python:3.13
 
 # Set the working directory
-RUN mkdir /app
-WORKDIR /app
+WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Copy application files
-COPY app/* /app
+COPY app/* ${LAMBDA_TASK_ROOT}
 
 # Install dependencies
 #RUN pip install --no-cache-dir -r requirements.txt
