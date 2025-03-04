@@ -2,7 +2,7 @@
 FROM public.ecr.aws/lambda/python:3.13
 
 # Set the working directory
-WORKDIR ${LAMBDA_TASK_ROOT}
+#WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Copy application files
 COPY app/* ${LAMBDA_TASK_ROOT}
