@@ -41,9 +41,8 @@ jobs:
       - name: Apply Terraform Changes
         working-directory: base-infra
         run: | 
-        
-        terraform apply -auto-approve
-        aws s3 cp terraform.tfstate s3://terraform-state-bucket-unique-name123/terraform.tfstate
+           terraform apply -auto-approve
+           aws s3 cp terraform.tfstate s3://terraform-state-bucket-unique-name123/terraform.tfstate
 
   main-infra:
     name: Deploy Main Infrastructure
