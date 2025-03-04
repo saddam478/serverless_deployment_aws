@@ -17,6 +17,7 @@ provider "aws" {
 # ✅ S3 Bucket for Terraform State
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "terraform-state-bucket-unique-name123"
+  force_delete = true
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state_versioning" {
@@ -60,6 +61,7 @@ resource "aws_iam_user_policy_attachment" "attach_dynamodb" {
 
 resource "aws_s3_bucket" "public_bucket" {
   bucket = "my-public-bucket-unique-name456"
+  force_delete = true
 }
 
 # ✅ Disable Public Access Block Policy (Allows Public Policy)
@@ -90,6 +92,7 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
 resource "aws_ecr_repository" "my_ecr_repo" {
   name                 = "my-ecr-repo"
   image_tag_mutability = "MUTABLE"
+  force_delete = true
 }
 
 # -------------------------------
