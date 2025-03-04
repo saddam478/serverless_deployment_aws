@@ -1,11 +1,22 @@
 name: Terraform Deployment
 
 on:
-  workflow_dispatch:  # Allows manual execution
+  workflow_dispatch:
+    inputs:
+      infra:
+        description: "Choose the infrastructure to deploy (base-infra or main-infra)"
+        required: true
+        default: "base-infra"
+        type: choice
+        options:
+          - base-infra
+          - main-infra
 
 jobs:
-  setup-infra:
+  base-infra:
+    name: Deploy Base Infrastructure
     runs-on: ubuntu-latest
+    if: github.event.inputs.infra == 'base-infra'  # ✅ Runs only if "base-infra" is selected
 
     steps:
       - name: Checkout Repository
@@ -23,8 +34,43 @@ jobs:
         with:
           terraform_version: latest
 
-      - name: Copy Terraform State File to S3
-        run: |
-          terraform init
-          terraform apply -auto-approve
-          #aws s3 cp terraform.tfstate s3://terraform-state-bucket-unique-name123/terraform.tfstate
+      - name: Initialize Terraform
+        working-directory: base-infra
+        run: terraform init
+
+      - name: Apply Terraform Changes
+        working-directory: base-infra
+        run: | 
+        
+        terraform apply -auto-approve
+        aws s3 cp terraform.tfstate s3://terraform-state-bucket-unique-name123/terraform.tfstate
+
+  main-infra:
+    name: Deploy Main Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event.inputs.infra == 'main-infra'  # ✅ Runs only if "main-infra" is selected
+    needs: base-infra  # Ensures "base-infra" is deployed first
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
+      - name: Initialize Terraform
+        working-directory: main-infra
+        run: terraform init
+
+      - name: Apply Terraform Changes
+        working-directory: main-infra
+        run: terraform apply -auto-approve
