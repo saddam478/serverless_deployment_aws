@@ -26,6 +26,6 @@ jobs:
           docker build -t ${{ secrets.ECR_URL }}:latest .
           docker push ${{ secrets.ECR_URL }}:latest
 
-      #- name: Deploy to AWS Lambda
-      #  run: |
-      #    aws lambda update-function-code --function-name $LAMBDA_FUNCTION --image-uri ${{ secrets.ECR_URL }}:$IMAGE_TAG
+      - name: Deploy to AWS Lambda
+        run: |
+          aws lambda update-function-code --function-name DemoLambdaFunction --image-uri ${{ secrets.ECR_URL }}:latest
