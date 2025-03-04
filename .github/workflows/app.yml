@@ -23,7 +23,6 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          cd app
           docker build -t ${{ secrets.ECR_URL }}:latest .
           docker push ${{ secrets.ECR_URL }}:latest
 
